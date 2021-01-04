@@ -35,6 +35,10 @@ int main(int argc, char* argv[]){
 
     //get info
     strcpy(algorithm, argv[1]);             //1st argument: algorithm to be used (LRU/Second Chance)
+    if ( ( strcmp(algorithm, "LRU") != 0) && ( strcmp(algorithm, "SECC") != 0) ){
+        printf("Wrong input for algorithm value. Must be 'LRU'/'SECC'\n");
+        return 1;
+    }
     num_of_frames = atoi(argv[2]);          //2nd argument: number of frames
     q = atoi(argv[3]);                      //3rd argument: number of references
 
@@ -77,53 +81,84 @@ int main(int argc, char* argv[]){
     ////////////////////
 
     //int cur_in_frames = 0;
-    //struct Table* page_hashtable;         //keeps pages in memory
+    struct Table* hashed_ptable1;         //keeps pages in memory
+    hashed_ptable1 = malloc(sizeof(struct Table)*TABLE_SIZE);    //allocation of the hashed page table for process1
+
+    struct Table* hashed_ptable2;
+    hashed_ptable2 = malloc(sizeof(struct Table)*TABLE_SIZE);    //allocation of the hashed page table for process2
+
     char *address;
     char op;
 
+    int process_num = 0;
+
     bool finished1 = false, finished2 = false;
 
+    
+    int max_counter = 1;
 
-    int q_counter = 0;
-    while (q_counter < 2*q){
-
-        //Read from file
-        if ( (q_counter % 2 == 0) && !finished1){
-            //read from file 1
-            if ( parser(file1, &address, &op) == -1 ){  //if file is finished
-                finished1 = true;
-                continue;
-            }
-            printf("File1\naddress: %s, op: %c\n", address,op);
+    while ( max_counter < max_ref*2 ){    //max times for process 1 and max times for process 2
         
-        } else if ( (q_counter % 2 == 1) && !finished2 ){
-            //read from file 2
-            if ( parser(file2, &address, &op) == -1 ){  //if file is finished
-                finished2 = true;
-                continue;
+        int q_counter = 0;
+
+        process_num = 1;    //start with process1
+
+        while (q_counter < 2*q){    // q references each time
+
+            if (q_counter == q){    //after q readings, move to process 2
+                process_num = 2;
             }
-            printf("File2\naddress: %s, op: %c\n", address,op);
+
+            //Read from file
+            if ( ( process_num == 1 ) && !finished1){
+                //read from file 1
+                if ( parser(file1, &address, &op) == -1 ){  //if file is finished
+                    finished1 = true;
+                    continue;
+                }
+                printf("File1       address: %s, op: %c\n", address,op);
+            
+            } else if ( ( process_num == 2 ) && !finished2 ){
+                //read from file 2
+                if ( parser(file2, &address, &op) == -1 ){  //if file is finished
+                    finished2 = true;
+                    continue;
+                }
+                printf("File2       address: %s, op: %c\n", address,op);
+            }
+            
+
+            //check if page is already in memory
+            //if there is space
+            
+                //put page in memory
+                // if ( process_num == 1 ){
+                    //insert_in_hashtable(hashed_ptable1, vir_page_num, frame_num);
+                //} else {
+                    //insert_in_hashtable(hashed_ptable2, vir_page_num, frame_num);
+                //}
+                //cur_in_frames++;
+            
+            //else
+
+            /*    if ( strcmp(algorithm, "LRU") == 0){
+                    //LRU_algorithm();
+                } else {
+                    //SECC_algorithm();
+                }
+            */
+
+
+            //--ενημέρωση πίνακα σελίδων??
+            //αν έχουμε εγγραφή στο δίσκο:          w_counter++;
+            //αν έχουμε ανάγνωση από το δίσκο:      r_counter++;
+
+            max_counter++;
+            q_counter++;
         }
-        
 
-        //check if page is already in memory
-        //if there is space
-            //put page in memory
-        //else
-            //page_replacement(algorithm);
-
-        //if there was space in the frames: cur_in_frames++;
-
-        //ενημέρωση πίνακα σελίδων
-        //αν έχουμε εγγραφή στο δίσκο:          w_counter++;
-        //αν έχουμε ανάγνωση από το δίσκο:      r_counter++;
-
-
-        q_counter++;
+    
     }
-
-    
-    
     
     
     
@@ -156,18 +191,9 @@ int parser(FILE* file, char** address, char *operation){
     char line[LINE_SIZE];
     if ( fgets(line, LINE_SIZE, file) != NULL){
         sscanf(line,"%s %c", *address, &(*operation));
-        //sscanf(line,"%c", &(*operation));
         return 0;
     }
 
     return -1;
-
-
-    //char address[ADDRESS_SIZE];
-    //*address = malloc( sizeof(char)* ADDRESS_SIZE);
-    //read and return the address
-    //fscanf(file, "%s", *address);
-    //fscanf(file, "%s", operation);
-
 
 }
