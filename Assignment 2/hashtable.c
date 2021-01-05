@@ -55,6 +55,31 @@ void insert_in_hashtable(struct Table* hashtable, int vir_page_num, int frame_nu
 }
 
 
+bool in_hashtable(struct Table* hashtable, int page_num) {
+
+    if (hashtable == NULL){
+        return false;
+    }
+
+    int row = hashfunction(page_num);                   //row of hashtable (which chain to follow)
+    
+    struct Bucket* current_bucket; 
+
+    current_bucket = hashtable[row].bucket;
+
+    while ( current_bucket != NULL){
+
+        if ( current_bucket->page_num == page_num ){
+            return true;
+        }
+
+        current_bucket = current_bucket->nextbuck;
+
+    }
+
+    return false;
+
+}
 
 
 
@@ -82,3 +107,39 @@ struct Bucket* get_page(struct Table* hashtable, int page_num){
     return NULL;
 }
 
+
+bool delete_from_hashtable(struct Table* hashtable, int page_num){
+
+    int row = hashfunction(page_num);                   //row of hashtable (which chain to follow)
+    
+    struct Bucket* current_bucket, *temp;
+        
+
+    if ( hashtable[row].bucket->page_num == page_num){  //case: in first bucket of chain
+        temp = hashtable[row].bucket->nextbuck;
+        free(hashtable[row].bucket);
+        hashtable[row].bucket = temp;
+        return true;
+    }
+
+
+    current_bucket = hashtable[row].bucket;
+
+
+    while ( current_bucket->nextbuck != NULL){
+
+        if ( current_bucket->nextbuck->page_num == page_num ){
+            temp = current_bucket->nextbuck->nextbuck;
+            free(current_bucket->nextbuck);
+            current_bucket->nextbuck = temp;
+            return true;
+        }
+
+        current_bucket = current_bucket->nextbuck;
+
+    }
+
+    return false;   //not found
+
+
+}

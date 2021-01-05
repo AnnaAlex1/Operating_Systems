@@ -18,6 +18,7 @@
     
 //}
 
+void SECC_algorithm(struct Table* ptable, int page_num, int reading, op);
 
 
 
