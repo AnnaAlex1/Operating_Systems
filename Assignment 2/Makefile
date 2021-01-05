@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall
+CFLAGS=-Wall -g
 
 	
 assign2: second_chance.o lru.o hashtable.o simulator.o

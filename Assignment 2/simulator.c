@@ -14,7 +14,7 @@
 #define LINE_SIZE 50
 
 int num_of_frames;
-struct Index* index;
+struct Index* indexes;
 struct Statistics statistics;
 
 
@@ -47,13 +47,13 @@ int main(int argc, char* argv[]){
 
     if (argc == 5) max_ref= atoi(argv[4]);    //case: 4 arguments given: max number of references was given   
 
- /* 
+  /*
     printf("Algorithm to be used: %s\n", algorithm);
     printf("Number of frames in memory: %d\n", num_of_frames);
     printf("Number of references q: %d\n", q);
     printf("Maximum number of references: %d\n", max_ref);
 */
-
+    
     /////////OPENING FILES
     FILE *file1, *file2;
 
@@ -87,13 +87,15 @@ int main(int argc, char* argv[]){
     char op;
     int page_num, offset;
 
+    int frame = -1;      //to hold number of frame
+
     int process_num;    // 1: for process1 (file1), 2: for process2 (file2)
     bool finished1 = false, finished2 = false;  //helping variables for checking if the reading of the files is finished
 
     
     //Initialization of data structures
-    index = malloc( sizeof(struct Index) *num_of_frames );
-    init_index(index);
+    indexes = malloc( sizeof(struct Index) *num_of_frames );
+    init_index(indexes);
 
     init_statistics(statistics);
 
@@ -110,6 +112,7 @@ int main(int argc, char* argv[]){
 
             if (q_counter == q){    //after q readings, move to process 2
                 process_num = 2;
+                printf("Process: %d\n", process_num);
             }
 
 
@@ -128,7 +131,7 @@ int main(int argc, char* argv[]){
                 //choose hashtable
                 ptable_ptr = hashed_ptable1;
 
-                printf("File1 -> address: %s, op: %c\n", address,op);
+                //printf("File1 -> address: %s, op: %c\n", address,op);
                 printf("Page number: %d\nOffset: %d\n", page_num, offset);
             
             } else if ( ( process_num == 2 ) && !finished2 ){
@@ -144,38 +147,43 @@ int main(int argc, char* argv[]){
                 //choose hashtable
                 ptable_ptr = hashed_ptable2;
 
-                printf("File2 -> address: %s, op: %c\n", address,op);
+                //printf("File2 -> address: %s, op: %c\n", address,op);
                 printf("Page number: %d\nOffset: %d\n", page_num, offset);
             }
             ////////////////////////////
             
-            if ( in_hashtable(ptable_ptr, page_num) ){  //check if the page is already in memory
-                printf("Already in memory! Moving on...\n");
+            if (op == 'W'){
+                statistics.w_counter++; //increase number of references for writing
+            } else {
+                statistics.r_counter++; //increase number of references for reading
+            }
 
+
+            if ( in_hashtable(ptable_ptr, page_num, &frame) ){  //check if the page is already in memory
+                printf("Already in memory! Moving on...\n");
+                if (strcmp(algorithm, "SECC") == 0)  indexes[frame].sec_ch_bit = true;
 
             } else {
-                printf("Not in memory.\n");
+                printf("Not in memory. ");
                 statistics.page_faults++;
+                statistics.readings_from_disk++;
                 
                 if (cur_in_frames < num_of_frames ){ //if memory frames are not all occupied
                     printf("There is space in frames. Placing...\n");
                     insert_in_hashtable(ptable_ptr, page_num, cur_in_frames);
-                    update_index(index, page_num, op, cur_in_frames, cur_in_frames);
+                    update_index(indexes,algorithm, page_num, op, cur_in_frames, cur_in_frames, process_num);
                     cur_in_frames++;
+                    if (strcmp(algorithm, "SECC") == 0)  indexes[cur_in_frames].sec_ch_bit = 1;
                 } else {                              //if memory is full
                     printf("No space in frames! Executing the algorithm...\n");
                     if ( strcmp(algorithm, "LRU") == 0){
-                        LRU_algorithm(ptable_ptr, page_num, max_counter, op);
+                        LRU_algorithm(hashed_ptable1, hashed_ptable2, page_num, op, process_num, max_counter);
                     } else {
-                        SECC_algorithm(ptable_ptr, page_num, max_counter, op);
+                        SECC_algorithm(hashed_ptable1, hashed_ptable2, page_num, op, process_num, max_counter);
                     }
                 }
             }
 
-
-            //--ενημέρωση πίνακα σελίδων??
-            //αν έχουμε εγγραφή στο δίσκο:          w_counter++;
-            //αν έχουμε ανάγνωση από το δίσκο:      r_counter++;
 
             max_counter++;
             q_counter++;
@@ -202,11 +210,13 @@ int main(int argc, char* argv[]){
 
 
 
-void init_index(struct Index *index){
+void init_index(struct Index *indexes){
     for (int i=0; i<num_of_frames; i++){
-        index[i].page_number=-1;
-        index[i].last_used=-1;
-        index[i].changed=-1;
+        indexes[i].page_number=-1;
+        indexes[i].last_used=-1;
+        indexes[i].changed=-1;
+        indexes[i].processid=-1;
+        indexes[i].sec_ch_bit = 0;
     }
 }
 
@@ -214,16 +224,22 @@ void init_statistics(struct Statistics statistics){
     statistics.w_counter = 0;
     statistics.r_counter = 0;
     statistics.page_faults = 0;
+    statistics.saves_in_disk = 0;
+    statistics.readings_from_disk = 0;
+
 }
 
 
 void print_statistics(void){
 
     printf("\n\nSTATISTICS\n");
-    printf("Number of writings to the disk performed: %d\n", statistics.w_counter);
-    printf("Number of readings from the disk performed: %d\n", statistics.r_counter);
+    printf("Number of references for wrtining: %d\n", statistics.w_counter);
+    printf("Number of references for reading: %d\n", statistics.r_counter);
+    printf("Number of writings to the disk performed: %d\n", statistics.saves_in_disk);
+    printf("Number of readings from the disk performed: %d\n", statistics.readings_from_disk);
     printf("Number of page-faults that occured: %d\n", statistics.page_faults);
     printf("Number of frames in memory: %d\n", num_of_frames);
+    
     
 }
 
@@ -272,15 +288,19 @@ void split_address(char* address, int *page_num, int *offset){
 }
 
 
-void update_index(struct Index *index, int page_num, char op, int reading, int position){
+void update_index(struct Index *indexes, char* algorithm, int page_num, char op, int reading, int position, int processid){
 
-    index[position].page_number = page_num;
-    index[position].last_used = reading;
+    indexes[position].page_number = page_num;
+    indexes[position].last_used = reading;
     if ( op == 'R'){
-        index[position].changed = false;
+        indexes[position].changed = false;
     } else {
-        index[position].changed = true;   
+        indexes[position].changed = true;   
     }
+    indexes[position].processid = processid;
 
+    if ( strcmp(algorithm, "SECC") == 0 ){
+        indexes[position].sec_ch_bit = 1;
+    }
 
 }

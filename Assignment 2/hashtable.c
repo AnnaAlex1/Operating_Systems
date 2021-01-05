@@ -32,7 +32,7 @@ void insert_in_hashtable(struct Table* hashtable, int vir_page_num, int frame_nu
     struct Bucket* current_bucket;             //the bucket in which the record will be stored 
 
     row = hashfunction(vir_page_num);
-    
+    printf("Inserting page %d in row %d\n", vir_page_num, row);
 
 
     //put in hash table
@@ -55,7 +55,7 @@ void insert_in_hashtable(struct Table* hashtable, int vir_page_num, int frame_nu
 }
 
 
-bool in_hashtable(struct Table* hashtable, int page_num) {
+bool in_hashtable(struct Table* hashtable, int page_num, int* frame) {
 
     if (hashtable == NULL){
         return false;
@@ -70,6 +70,7 @@ bool in_hashtable(struct Table* hashtable, int page_num) {
     while ( current_bucket != NULL){
 
         if ( current_bucket->page_num == page_num ){
+            *frame = current_bucket->frame_num;
             return true;
         }
 
@@ -114,7 +115,14 @@ bool delete_from_hashtable(struct Table* hashtable, int page_num){
     
     struct Bucket* current_bucket, *temp;
         
+    printf("Deleting page %d from row %d\n", page_num, row);
 
+    if (hashtable[row].bucket == NULL){
+        printf("Chain in row %d is empty\n", row);
+        return false;
+    }
+
+    
     if ( hashtable[row].bucket->page_num == page_num){  //case: in first bucket of chain
         temp = hashtable[row].bucket->nextbuck;
         free(hashtable[row].bucket);

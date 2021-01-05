@@ -21,7 +21,7 @@ struct Bucket{
 
 int hashfunction(int num);
 void insert_in_hashtable(struct Table* hashtable, int vir_page_num, int frame_num);
-bool in_hashtable(struct Table* hashtable, int page_num);
+bool in_hashtable(struct Table* hashtable, int page_num, int* frame);
 struct Bucket* get_page(struct Table* hashtable, int page_num);
 bool delete_from_hashtable(struct Table* hashtable, int page_num);
 
