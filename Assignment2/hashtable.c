@@ -84,29 +84,6 @@ bool in_hashtable(struct Table* hashtable, int page_num, int* frame) {
 
 
 
-struct Bucket* get_page(struct Table* hashtable, int page_num){
-
-    int row = hashfunction(page_num);                   //row of hashtable (which chain to follow)
-    
-    struct Bucket* current_bucket;
-    struct Bucket* page_ptr;         
-
-    current_bucket = hashtable[row].bucket;
-
-    while ( current_bucket != NULL){
-
-        if ( current_bucket->page_num == page_num ){
-            page_ptr = malloc(sizeof(struct Bucket));
-            memcpy(page_ptr, current_bucket, sizeof(struct Bucket));
-            return page_ptr;
-        }
-
-        current_bucket = current_bucket->nextbuck;
-
-    }
-
-    return NULL;
-}
 
 
 bool delete_from_hashtable(struct Table* hashtable, int page_num){

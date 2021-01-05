@@ -15,7 +15,7 @@ void SECC_algorithm(struct Table* ptable1, struct Table* ptable2, int page_num, 
     int pid;
 
     //find page to be removed
-    while ( indexes[pointer].sec_ch_bit != false  ){      //search for a victim
+    while ( indexes[pointer].sec_ch_bit != false ){      //search for a victim
         indexes[pointer].sec_ch_bit = false;
         pointer = (pointer + 1) % num_of_frames;
     }

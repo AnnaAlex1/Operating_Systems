@@ -161,8 +161,8 @@ int main(int argc, char* argv[]){
 
             if ( in_hashtable(ptable_ptr, page_num, &frame) ){  //check if the page is already in memory
                 printf("Already in memory! Moving on...\n");
-                if (strcmp(algorithm, "SECC") == 0)  indexes[frame].sec_ch_bit = true;
-
+                if (strcmp(algorithm, "SECC") == 0)  indexes[frame].sec_ch_bit = 1;
+                if (strcmp(algorithm, "LRU") == 0)  indexes[frame].last_used = max_counter;
             } else {
                 printf("Not in memory. ");
                 statistics.page_faults++;
@@ -201,7 +201,7 @@ int main(int argc, char* argv[]){
     ///////STATISTICS
     print_statistics();
 
-
+    
     //closing files
     fclose(file1);
     fclose(file2);
@@ -236,7 +236,7 @@ void print_statistics(void){
     printf("Number of references for wrtining: %d\n", statistics.w_counter);
     printf("Number of references for reading: %d\n", statistics.r_counter);
     printf("Number of writings to the disk performed: %d\n", statistics.saves_in_disk);
-    printf("Number of readings from the disk performed: %d\n", statistics.readings_from_disk);
+    printf("Number of transferings of pages from disk: %d\n", statistics.readings_from_disk);
     printf("Number of page-faults that occured: %d\n", statistics.page_faults);
     printf("Number of frames in memory: %d\n", num_of_frames);
     
