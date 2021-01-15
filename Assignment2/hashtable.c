@@ -4,17 +4,22 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <math.h>
 
 
 
 
 int hashfunction(int num){
+
+    num = ((num >> 16) ^ num) * 0x45d9f3b;
+    num = ((num >> 16) ^ num) * 0x45d9f3b;
+    num = (num >> 16) ^ num;
+
     return num%TABLE_SIZE;
     
 }
 
 
-    // VIRTUAL PAGE NUM = HASH VALUE????????????
 
 void insert_in_hashtable(struct Table* hashtable, int vir_page_num, int frame_num){
 
@@ -22,7 +27,7 @@ void insert_in_hashtable(struct Table* hashtable, int vir_page_num, int frame_nu
     struct Bucket* new_bucket = malloc(sizeof(struct Bucket)); 
 
     //set the bucket
-    new_bucket->page_num = vir_page_num; //hashvalue???
+    new_bucket->page_num = vir_page_num;
     new_bucket->frame_num = frame_num;
     new_bucket->nextbuck = NULL;
 
@@ -69,8 +74,8 @@ bool in_hashtable(struct Table* hashtable, int page_num, int* frame) {
 
     while ( current_bucket != NULL){
 
-        if ( current_bucket->page_num == page_num ){
-            *frame = current_bucket->frame_num;
+        if ( current_bucket->page_num == page_num ){ //if found
+            *frame = current_bucket->frame_num;         //get the frame number
             return true;
         }
 

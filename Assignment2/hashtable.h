@@ -1,8 +1,7 @@
 #ifndef __HASH__
 #define __HASH__
 
-#define TABLE_SIZE 10    //number of rows in the hashtable
-#define BUC_CAPACITY 10 //number of records that fit in a bucket
+#define TABLE_SIZE 500   //number of rows in the hashtable
 
 #include <stdbool.h>
 

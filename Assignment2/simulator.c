@@ -2,13 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <limits.h>
 
 #include "hashtable.h"
 #include "second_chance.h"
 #include "lru.h"
 
 
-#define ADDRESS_SIZE 8                     //to_change
+
+#define ADDRESS_SIZE 8
 #define PAGE_SIZE 4096
 #define FRAME_SIZE 4096
 #define LINE_SIZE 50
@@ -38,12 +40,12 @@ int main(int argc, char* argv[]){
     //GETTING ARGUMENTS
     char algorithm[10];
     int q;
-    int max_ref=100;    //default value in case it's not given                //to change
+    int max_ref=INT_MAX;    //default value in case it's not given                //to change
 
 
     strcpy(algorithm, argv[1]);             //1st argument: algorithm to be used (LRU/Second Chance)
     num_of_frames = atoi(argv[2]);          //2nd argument: number of frames
-    q = atoi(argv[3]);                      //3rd argument: number of references
+    q = atoi(argv[3]);                      //3rd argument: number of references each round
 
     if (argc == 5) max_ref= atoi(argv[4]);    //case: 4 arguments given: max number of references was given   
 
@@ -75,11 +77,19 @@ int main(int argc, char* argv[]){
 
     int cur_in_frames = 0;                  //counts nuber of pages currently in memory
     
-    struct Table* hashed_ptable1;         //keeps pages in memory
+    struct Table* hashed_ptable1;         //keeps pages in memory (process 1)
     hashed_ptable1 = malloc(sizeof(struct Table)*TABLE_SIZE);    //allocation of the hashed page table for process1
+    for (int i =0; i<TABLE_SIZE; i++){
+        hashed_ptable1[i].bucket = NULL;
+    }
 
-    struct Table* hashed_ptable2;
+    struct Table* hashed_ptable2;       //keeps pages in memory (process 2)
     hashed_ptable2 = malloc(sizeof(struct Table)*TABLE_SIZE);    //allocation of the hashed page table for process2
+    for (int i =0; i<TABLE_SIZE; i++){
+        hashed_ptable2[i].bucket = NULL;
+    }
+
+
 
     struct Table* ptable_ptr;            //hashtable to be used in this loop (points to hashed_ptable1/2)
 
@@ -101,18 +111,35 @@ int main(int argc, char* argv[]){
 
 
     int q_counter;
-    int max_counter = 1;
+    int max_ctr1 = 0, max_ctr2 = 0;         //max for process 1, max for process 2
 
-    while ( max_counter < max_ref*2 ){    //max times for process 1 and max times for process 2
-        
+    while ( max_ctr1 < max_ref ||  max_ctr2 < max_ref ){    //max times for process 1 and max times for process 2
+
         process_num = 1;    //start with process1
 
         q_counter = 0;
         while (q_counter < 2*q){    // q references each time
 
+            if (max_ctr1 >= max_ref &&  max_ctr2 >= max_ref) break; //break if the number of max_references 
+                                                                    //   was overpassed for both
+            if (finished1 && finished2) break;            //break if both files were read completely
+     
+
+
             if (q_counter == q){    //after q readings, move to process 2
                 process_num = 2;
                 printf("Process: %d\n", process_num);
+            }
+
+
+            if (process_num == 1 && (finished1 || max_ctr1 >= max_ref) ){    //if file is finished
+                q_counter++;                                               //or overpassed max references
+                max_ctr1++;                                                 //skip this process
+                continue;
+            } else if (process_num == 2 && (finished2 || max_ctr2 >= max_ref) ){
+                q_counter++;
+                max_ctr2++;
+                continue;
             }
 
 
@@ -123,6 +150,8 @@ int main(int argc, char* argv[]){
                 //read from file 1
                 if ( parser(file1, address, &op) == -1 ){  //if file is finished
                     finished1 = true;
+                    /*max_ctr1++;
+                    q_counter++;*/
                     continue;
                 }
                 //calculate page number and offset
@@ -139,6 +168,9 @@ int main(int argc, char* argv[]){
                 //read from file 2
                 if ( parser(file2, address, &op) == -1 ){  //if file is finished
                     finished2 = true;
+
+                    /*max_ctr2++;
+                    q_counter++;*/
                     continue;
                 }
                 //calculate page number and offset
@@ -151,7 +183,7 @@ int main(int argc, char* argv[]){
                 printf("Page number: %d\nOffset: %d\n", page_num, offset);
             }
             ////////////////////////////
-            
+
             if (op == 'W'){
                 statistics.w_counter++; //increase number of references for writing
             } else {
@@ -162,7 +194,7 @@ int main(int argc, char* argv[]){
             if ( in_hashtable(ptable_ptr, page_num, &frame) ){  //check if the page is already in memory
                 printf("Already in memory! Moving on...\n");
                 if (strcmp(algorithm, "SECC") == 0)  indexes[frame].sec_ch_bit = 1;
-                if (strcmp(algorithm, "LRU") == 0)  indexes[frame].last_used = max_counter;
+                if (strcmp(algorithm, "LRU") == 0)  indexes[frame].last_used = max_ctr1 + max_ctr2 + 1; //number of repetition
             } else {
                 printf("Not in memory. ");
                 statistics.page_faults++;
@@ -177,17 +209,26 @@ int main(int argc, char* argv[]){
                 } else {                              //if memory is full
                     printf("No space in frames! Executing the algorithm...\n");
                     if ( strcmp(algorithm, "LRU") == 0){
-                        LRU_algorithm(hashed_ptable1, hashed_ptable2, page_num, op, process_num, max_counter);
+                        LRU_algorithm(hashed_ptable1, hashed_ptable2, page_num, op, process_num, max_ctr1 + max_ctr2 + 1);
                     } else {
-                        SECC_algorithm(hashed_ptable1, hashed_ptable2, page_num, op, process_num, max_counter);
+                        SECC_algorithm(hashed_ptable1, hashed_ptable2, page_num, op, process_num, max_ctr1 + max_ctr2 + 1);
                     }
                 }
             }
 
 
-            max_counter++;
+            if (process_num == 1){
+                max_ctr1++;
+            }else {
+                max_ctr2++;
+            }
+
             q_counter++;
             printf("\n");
+        }
+
+        if (finished1 && finished2){
+            break;
         }
 
     
@@ -199,7 +240,7 @@ int main(int argc, char* argv[]){
     
     
     ///////STATISTICS
-    print_statistics();
+    print_statistics(algorithm);
 
     
     //closing files
@@ -230,10 +271,11 @@ void init_statistics(struct Statistics statistics){
 }
 
 
-void print_statistics(void){
+void print_statistics( char* algorithm){
 
     printf("\n\nSTATISTICS\n");
-    printf("Number of references for wrtining: %d\n", statistics.w_counter);
+    printf("Algorithm: %s\n", algorithm);
+    printf("Number of references for writing: %d\n", statistics.w_counter);
     printf("Number of references for reading: %d\n", statistics.r_counter);
     printf("Number of writings to the disk performed: %d\n", statistics.saves_in_disk);
     printf("Number of transferings of pages from disk: %d\n", statistics.readings_from_disk);
