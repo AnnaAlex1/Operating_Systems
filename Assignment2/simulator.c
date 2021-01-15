@@ -79,13 +79,13 @@ int main(int argc, char* argv[]){
     
     struct Table* hashed_ptable1;         //keeps pages in memory (process 1)
     hashed_ptable1 = malloc(sizeof(struct Table)*TABLE_SIZE);    //allocation of the hashed page table for process1
-    for (int i =0; i<TABLE_SIZE; i++){
+    for (int i=0; i<TABLE_SIZE; i++){
         hashed_ptable1[i].bucket = NULL;
     }
 
     struct Table* hashed_ptable2;       //keeps pages in memory (process 2)
     hashed_ptable2 = malloc(sizeof(struct Table)*TABLE_SIZE);    //allocation of the hashed page table for process2
-    for (int i =0; i<TABLE_SIZE; i++){
+    for (int i=0; i<TABLE_SIZE; i++){
         hashed_ptable2[i].bucket = NULL;
     }
 
@@ -111,16 +111,16 @@ int main(int argc, char* argv[]){
 
 
     int q_counter;
-    int max_ctr1 = 0, max_ctr2 = 0;         //max for process 1, max for process 2
+    int max_ctr = 0;         //max for process 1, max for process 2
 
-    while ( max_ctr1 < max_ref ||  max_ctr2 < max_ref ){    //max times for process 1 and max times for process 2
+    while ( max_ctr < max_ref ){    //max times for process 1 and max times for process 2
 
         process_num = 1;    //start with process1
 
         q_counter = 0;
         while (q_counter < 2*q){    // q references each time
 
-            if (max_ctr1 >= max_ref &&  max_ctr2 >= max_ref) break; //break if the number of max_references 
+            if (max_ctr >= max_ref ) break; //break if the number of max_references 
                                                                     //   was overpassed for both
             if (finished1 && finished2) break;            //break if both files were read completely
      
@@ -132,13 +132,13 @@ int main(int argc, char* argv[]){
             }
 
 
-            if (process_num == 1 && (finished1 || max_ctr1 >= max_ref) ){    //if file is finished
+            if (process_num == 1 && (finished1 || max_ctr >= max_ref) ){    //if file is finished
                 q_counter++;                                               //or overpassed max references
-                max_ctr1++;                                                 //skip this process
+                max_ctr++;                                                 //skip this process
                 continue;
-            } else if (process_num == 2 && (finished2 || max_ctr2 >= max_ref) ){
+            } else if (process_num == 2 && (finished2 || max_ctr >= max_ref) ){
                 q_counter++;
-                max_ctr2++;
+                max_ctr++;
                 continue;
             }
 
@@ -150,8 +150,6 @@ int main(int argc, char* argv[]){
                 //read from file 1
                 if ( parser(file1, address, &op) == -1 ){  //if file is finished
                     finished1 = true;
-                    /*max_ctr1++;
-                    q_counter++;*/
                     continue;
                 }
                 //calculate page number and offset
@@ -168,9 +166,6 @@ int main(int argc, char* argv[]){
                 //read from file 2
                 if ( parser(file2, address, &op) == -1 ){  //if file is finished
                     finished2 = true;
-
-                    /*max_ctr2++;
-                    q_counter++;*/
                     continue;
                 }
                 //calculate page number and offset
@@ -192,9 +187,12 @@ int main(int argc, char* argv[]){
 
 
             if ( in_hashtable(ptable_ptr, page_num, &frame) ){  //check if the page is already in memory
+            
                 printf("Already in memory! Moving on...\n");
                 if (strcmp(algorithm, "SECC") == 0)  indexes[frame].sec_ch_bit = 1;
-                if (strcmp(algorithm, "LRU") == 0)  indexes[frame].last_used = max_ctr1 + max_ctr2 + 1; //number of repetition
+                if (strcmp(algorithm, "LRU") == 0)  indexes[frame].last_used = max_ctr + 1; //number of repetition
+                if (op == 'W') { indexes[frame].changed = true; }  //if it's a writing reference, change the status
+
             } else {
                 printf("Not in memory. ");
                 statistics.page_faults++;
@@ -209,20 +207,14 @@ int main(int argc, char* argv[]){
                 } else {                              //if memory is full
                     printf("No space in frames! Executing the algorithm...\n");
                     if ( strcmp(algorithm, "LRU") == 0){
-                        LRU_algorithm(hashed_ptable1, hashed_ptable2, page_num, op, process_num, max_ctr1 + max_ctr2 + 1);
+                        LRU_algorithm(hashed_ptable1, hashed_ptable2, page_num, op, process_num, max_ctr + 1);
                     } else {
-                        SECC_algorithm(hashed_ptable1, hashed_ptable2, page_num, op, process_num, max_ctr1 + max_ctr2 + 1);
+                        SECC_algorithm(hashed_ptable1, hashed_ptable2, page_num, op, process_num, max_ctr + 1);
                     }
                 }
             }
 
-
-            if (process_num == 1){
-                max_ctr1++;
-            }else {
-                max_ctr2++;
-            }
-
+            max_ctr++;
             q_counter++;
             printf("\n");
         }
@@ -233,15 +225,32 @@ int main(int argc, char* argv[]){
 
     
     }
+
+
     
-    
-    
+    //after it's done, moving pages from memory back to the disk
+    for (int j=0; j<num_of_frames; j++){
+
+        if ( indexes[j].processid == 1 ){
+            delete_from_hashtable(hashed_ptable1, indexes[j].page_number );
+        } else {
+            delete_from_hashtable(hashed_ptable2, indexes[j].page_number );
+            
+        }
+
+        if (indexes[j].changed == true) {
+            statistics.saves_in_disk++;
+        }
+    }
     
     
     
     ///////STATISTICS
     print_statistics(algorithm);
 
+    free(hashed_ptable1);
+    free(hashed_ptable2);
+    free(indexes);
     
     //closing files
     fclose(file1);
