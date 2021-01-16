@@ -40,7 +40,7 @@ int main(int argc, char* argv[]){
     //GETTING ARGUMENTS
     char algorithm[10];
     int q;
-    int max_ref=INT_MAX;    //default value in case it's not given                //to change
+    int max_ref=INT_MAX;    //default value in case it's not given     
 
 
     strcpy(algorithm, argv[1]);             //1st argument: algorithm to be used (LRU/Second Chance)
@@ -158,7 +158,6 @@ int main(int argc, char* argv[]){
                 //choose hashtable
                 ptable_ptr = hashed_ptable1;
 
-                //printf("File1 -> address: %s, op: %c\n", address,op);
                 printf("Page number: %d\nOffset: %d\n", page_num, offset);
             
             } else if ( ( process_num == 2 ) && !finished2 ){
@@ -174,7 +173,6 @@ int main(int argc, char* argv[]){
                 //choose hashtable
                 ptable_ptr = hashed_ptable2;
 
-                //printf("File2 -> address: %s, op: %c\n", address,op);
                 printf("Page number: %d\nOffset: %d\n", page_num, offset);
             }
             ////////////////////////////
@@ -312,7 +310,6 @@ void split_address(char* address, int *page_num, int *offset){
     int offset_hex = (log2(PAGE_SIZE)) / 4;             // offset bytes / 4
     int p_addr_hex = 8 - offset_hex;           //page address bytes / 4
     
-    //printf("Offset size: %d characters\nPage Address size: %d characters\n",offset_hex, p_addr_hex);
 
 
     char temp_padd[p_addr_hex+1];
@@ -330,12 +327,10 @@ void split_address(char* address, int *page_num, int *offset){
     }
     temp_offset[offset_hex] = '\0';
 
-    //printf("address = %s\noffset = %s\n", temp_padd, temp_offset);
 
     *page_num = strtol(temp_padd, NULL, 16);
     *offset = strtol(temp_offset, NULL, 16);
 
-    //printf("Page number: %d\nOffset: %d\n", *page_num, *offset);
 }
 
 
