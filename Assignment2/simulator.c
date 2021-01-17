@@ -187,7 +187,7 @@ int main(int argc, char* argv[]){
             if ( in_hashtable(ptable_ptr, page_num, &frame) ){  //check if the page is already in memory
             
                 printf("Already in memory! Moving on...\n");
-                if (strcmp(algorithm, "SECC") == 0)  indexes[frame].sec_ch_bit = 1;
+                if (strcmp(algorithm, "SECC") == 0)  indexes[frame].sec_ch_bit = true;
                 if (strcmp(algorithm, "LRU") == 0)  indexes[frame].last_used = max_ctr + 1; //number of repetition
                 if (op == 'W') { indexes[frame].changed = true; }  //if it's a writing reference, change the status
 
@@ -201,7 +201,7 @@ int main(int argc, char* argv[]){
                     insert_in_hashtable(ptable_ptr, page_num, cur_in_frames);
                     update_index(indexes,algorithm, page_num, op, cur_in_frames, cur_in_frames, process_num);
                     cur_in_frames++;
-                    if (strcmp(algorithm, "SECC") == 0)  indexes[cur_in_frames].sec_ch_bit = 1;
+                    if (strcmp(algorithm, "SECC") == 0)  indexes[cur_in_frames].sec_ch_bit = 0;
                 } else {                              //if memory is full
                     printf("No space in frames! Executing the algorithm...\n");
                     if ( strcmp(algorithm, "LRU") == 0){
@@ -346,7 +346,7 @@ void update_index(struct Index *indexes, char* algorithm, int page_num, char op,
     indexes[position].processid = processid;
 
     if ( strcmp(algorithm, "SECC") == 0 ){
-        indexes[position].sec_ch_bit = 1;
+        indexes[position].sec_ch_bit = false;
     }
 
 }
